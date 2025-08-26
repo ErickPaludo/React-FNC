@@ -5,12 +5,33 @@
   text-align: center;
 }
 
-body {
-  display: flex;                   /* ativa Flexbox */
-  justify-content: center;         /* centraliza horizontalmente */
-  align-items: center;             /* centraliza verticalmente */
-  min-height: 100vh;               /* garante altura mínima da tela */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  box-sizing: border-box;
 }
+
+
+.app-container {
+  display: flex;
+  justify-content: center;  /* centraliza horizontalmente */
+  align-items: center;      /* centraliza verticalmente */
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;         /* garante que ocupe a altura total */
+  padding: 1rem;
+}
+
+
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);

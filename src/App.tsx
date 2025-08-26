@@ -1,34 +1,33 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useState } from "react";
 import validator, { stripLow } from "validator";
+import * as R from 'ramda';
 import './App.css'
 import 'bootstrap/dist/css/bootstrap.min.css'; 
-import { addMonths, format } from 'date-fns'
+import { addMonths, format,parseISO, subDays } from 'date-fns'
 import { Form,Table, Button, Container, Row, Col } from "react-bootstrap";
 import axios from "axios";
 
 let userToken:webToke;
 type webToke = {token:string,refreshToken:string,expiration:string,id:string}
-// Representa cada item de "financasGeral"
+
 type FinancaGeral = {
   divida: number;
   saldo: number;
 };
 
-// Representa cada item de "valores"
 type ValorCategoria = {
   categoria: string;
   valor: number;
 };
 
-// Representa cada item de "gastosDetalhados"
 type GastoDetalhado = {
   id: number;
   gpId: number;
   titulo: string;
   descricao: string;
   valor: number;
-  dthr: string; // ou Date se converter depois
+  dthr: string; 
   parcela: string;
   categoria: string;
   status: string;
@@ -110,11 +109,23 @@ function App() {
 
 function View() {
   const [dashboard, setDashboard] = useState<DashboardFinanceiro | null>(null);
+  const [dataIni,setDataIni] = useState(format(new Date().setUTCDate(1),'yyyy-MM-dd'))
+  const [dataFim,setDataFim] = useState(format(subDays(addMonths(new Date().setUTCDate(1),1),1),'yyyy-MM-dd'))
+  const [search,setSearch] = useState('')
+  const [status,setStatus] = useState('Todos')
+  const [category,setCategory] = useState('Todos')
 
   const handleClick = async () => {
     try {
+      console.log( `http://100.96.1.2:3000/geral/retorno?PageNumber=1&PageSize=9999&DataIni=
+        ${dataIni.split('-')[1]}%2F${dataIni.split('-')[2]}%2F${dataIni.split('-')[0]}
+        &DataFim=${dataFim.split('-')[1]}%2F${dataFim.split('-')[2]}%2F${dataFim.split('-')[0]}
+        ${search !== '' ? `&titulo=${search}` : ''}
+        ${category !== 'Todos' ? `&categoria=${category.substring(0,1)}`:''}
+        ${status !== 'Todos' ? `&status=${status === 'Pagos' ? 'S' : 'N' }`:''}`)
+
       const response = await axios.get<DashboardFinanceiro>(
-        "http://100.96.1.2:3000/geral/retorno?PageNumber=1&PageSize=9999&DataIni=01%2F01%2F2000&DataFim=01%2F01%2F2100",
+        `http://100.96.1.2:3000/geral/retorno?PageNumber=1&PageSize=9999&DataIni=${dataIni.split('-')[1]}%2F${dataIni.split('-')[2]}%2F${dataIni.split('-')[0]}&DataFim=${dataFim.split('-')[1]}%2F${dataFim.split('-')[2]}%2F${dataFim.split('-')[0]}${search !== '' ? `&titulo=${search}` : ''}${category !== 'Todos' ? `&categoria=${category.substring(0,1)}`:''}${status !== 'Todos' ? `&status=${status === 'Pagos' ? 'S' : 'N' }`:''}`,
         {
           headers: {
             Authorization: `Bearer ${userToken.token}`,
@@ -126,64 +137,108 @@ function View() {
       console.error("Erro na requisição:", error);
     }
   };
+
   return (
     <>
-    <Form className="gap-2">
-      <Row className="mb-3 gap-3">
-        <Form.Group>
-          <Form.Control type="text" placeholder="Titulo" />
-        </Form.Group>
-        <Row>
-        <Form.Group as={Col}>
-          <Form.Label className="p-2 d-flex justify-content-between">Category</Form.Label>
-          <Form.Select defaultValue="Todos">
-            <option>Todos</option>
-            <option>Saldo</option>
-            <option>Débito</option>
-            <option>Crédito</option>
-          </Form.Select>
-        </Form.Group>
-        <Form.Group as={Col}>
-          <Form.Label className="p-2 d-flex justify-content-between">Status</Form.Label>
-          <Form.Select defaultValue="Todos">
-            <option>Todos</option>
-            <option>Pagos</option>
-            <option>Pendente</option>
-          </Form.Select>
-        </Form.Group>
-        </Row>
-        <Row>
-          
-        <Form.Group as={Col}>
-          <Form.Control type="date" value={format(new Date(),'yyyy-MM-dd')} /> 
-        </Form.Group>
-        <Form.Group as={Col}>
-        <Form.Control type="date" value={format(addMonths(new Date(),1),'yyyy-MM-dd')}/> 
-        </Form.Group>
-        </Row>
-      </Row>
-    </Form>
+   <Form className="gap-2 mt-5">
+  <Row className="mb-3">
+    {/* Campo título */}
+    <Col md={4}>
+      <Form.Group>
+        <Form.Label>Título</Form.Label>
+        <Form.Control type="text" placeholder="Titulo" onChange={(e) => setSearch(e.target.value)}/>
+      </Form.Group>
+    </Col>
+
+    {/* Categoria */}
+    <Col md={4}>
+      <Form.Group>
+        <Form.Label>Categoria</Form.Label>
+        <Form.Select defaultValue="Todos" onChange={(e) => setCategory(e.target.value)}>
+          <option>Todos</option>
+          <option>Saldo</option>
+          <option>Débito</option>
+          <option>Crédito</option>
+        </Form.Select>
+      </Form.Group>
+    </Col>
+
+    {/* Status */}
+    <Col md={4}>
+      <Form.Group>
+        <Form.Label>Status</Form.Label>
+        <Form.Select defaultValue="Todos" onChange={(e) => setStatus(e.target.value)}>
+          <option>Todos</option>
+          <option>Pagos</option>
+          <option>Pendente</option>
+        </Form.Select>
+      </Form.Group>
+    </Col>
+  </Row>
+
+  <Row className="mb-3">
+    {/* Data Inicial */}
+    <Col md={6}>
+      <Form.Group>
+        <Form.Label>Data Inicial</Form.Label>
+        <Form.Control
+          type="date"
+          value={dataIni}
+          onChange={(e) => setDataIni(format(parseISO(e.target.value), 'yyyy-MM-dd'))}
+        />
+      </Form.Group>
+    </Col>
+
+    {/* Data Final */}
+    <Col md={6}>
+      <Form.Group>
+        <Form.Label>Data Final</Form.Label>
+        <Form.Control
+          type="date"
+          value={dataFim}
+          onChange={(e) => setDataFim(format(parseISO(e.target.value), 'yyyy-MM-dd'))}
+        />
+      </Form.Group>
+    </Col>
+  </Row>
+</Form> 
+{dashboard?.financasGeral.map((valores, index) => (
+  <div key={index} className="mb-2">
+    <Form.Label>Divida: R${valores.divida}</Form.Label>
+    <Form.Label className="ms-3">Saldo: R${valores.saldo}</Form.Label>
+  </div>
+))}
+<div><Form.Label>R${dashboard?.valores.at(-1)?.valor}</Form.Label></div>
     <Button onClick={handleClick}>Filtrar</Button>
-      <Table striped bordered hover className="mt-3 w-50">
+    <div className="table-responsive mt-2"  style={{ maxHeight: "400px", overflowY: "auto", overflowX: "auto" }}>
+      <Table striped bordered hover className="mt-3">
         <thead>
           <tr>
             <th>Titulo</th>
+            <th>Descrição</th>
             <th>Data</th>
             <th>Valor</th>
             <th>Parcela</th>
+            <th>Status</th>
           </tr>
         </thead>
-        <tbody>
-          {dashboard?.gastosDetalhados.map((gasto) => (
-             <tr> 
-              <td className="text-wrap">{gasto.titulo}</td>
-              <td>{gasto.dthr}</td>
-              <td>{gasto.valor}</td>
-              <td>{gasto.parcela}</td>
-            </tr>
-          ))}
-        </tbody>
+       <tbody>
+  {dashboard?.gastosDetalhados.map((gasto, index) => (
+     <tr
+       key={gasto.id ?? index} // se tiver id use id, senão índice
+       className={gasto.status === 'N' ? 'table-warning' : 'table-success'}
+     >
+      <td className="text-wrap">{gasto.titulo}</td>
+      <td>{gasto.descricao}</td>
+      <td>{gasto.dthr}</td>
+      <td>{gasto.valor}</td>
+      <td>{gasto.parcela}</td>
+      <td>{gasto.status}</td>
+    </tr>
+  ))}
+</tbody>
       </Table>
+    </div>
     </>
   );
 }
